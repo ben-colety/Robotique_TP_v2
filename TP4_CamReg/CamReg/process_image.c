@@ -2,6 +2,8 @@
 #include "hal.h"
 #include <chprintf.h>
 #include <usbcfg.h>
+#include <math.h>
+
 
 #include <main.h>
 #include <camera/po8030.h>
@@ -22,6 +24,11 @@
 
 #define SMOOTHING_FACTOR		2
 #define DETECTION_THRESHOLD		0.5
+
+#define LINE_WIDTH_CM 	5.05f
+#define CAMERA_FOV_DEG	45
+#define CAMERA_FOV_RAD	CAMERA_FOV_DEG*M_PI/180
+#define DISTANCE_DIV_FACTOR tan(CAMERA_FOV_RAD)
 
 static float distance_cm = 0;
 
@@ -79,11 +86,15 @@ static THD_FUNCTION(ProcessImage, arg) {
 			img_buff_pixel = ((((img_buff_ptr[2*pixel] << SIZE_INT8) | (img_buff_ptr[2*pixel+1]))&GREEN_MASK)); //takes only green from image buffer
 			image[pixel] = (uint8_t)(img_buff_pixel >> GREEN_POS); //Truncation
 		}
-		if(send_counter++%2 == 1 ) SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
+		//if(send_counter++%2 == 1 ) SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
 
 		//measure line width in px
 		line_width_px = get_line_width_px(image, IMAGE_BUFFER_SIZE);
-		//chprintf((BaseSequentialStream *)&SD3, "line width = %i \r\n", line_width_px);
+		chprintf((BaseSequentialStream *)&SD3, "line width = %i \r\n", line_width_px);
+
+		//calculate distance from paper
+		distance_cm = calculate_distance(line_width_px);
+		chprintf((BaseSequentialStream *)&SD3, "distance = %f \r\n", distance_cm);
     }
 }
 
@@ -144,4 +155,11 @@ uint16_t get_line_width_px(uint8_t* image, uint16_t size){
 		}
 	}
 	return line_width_px;
+}
+
+float calculate_distance(uint16_t line_width_px)
+{
+	if(line_width_px >= IMAGE_BUFFER_SIZE || line_width_px == 0)
+		return -1;
+	return LINE_WIDTH_CM * IMAGE_BUFFER_SIZE / (2*line_width_px*DISTANCE_DIV_FACTOR);
 }
