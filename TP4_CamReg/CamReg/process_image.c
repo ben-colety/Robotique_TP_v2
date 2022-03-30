@@ -94,7 +94,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		//calculate distance from paper
 		distance_cm = calculate_distance(line_width_px);
-		chprintf((BaseSequentialStream *)&SD3, "distance = %f \r\n", distance_cm);
+		chprintf((BaseSequentialStream *)&SD3, "distance = %3.2f \r\n", distance_cm);
     }
 }
 
