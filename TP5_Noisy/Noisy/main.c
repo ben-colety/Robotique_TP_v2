@@ -97,8 +97,35 @@ int main(void)
 
         if(size == FFT_SIZE){
 
+        	//convert buffer from array of floats to array of complex floats
+/*
+			static complex_float complex_input[FFT_SIZE];
+        	for(uint16_t counter =0; counter < FFT_SIZE; counter++){
+        		complex_input[counter].real = bufferCmplxInput[counter*2];	//because bufferOutput arranged in pairs of real and complex values
+        		complex_input[counter].imag = bufferCmplxInput[counter*2 + 1];
+        	}
+//********************** stopwatch
+        	volatile uint16_t time = 0;
+        	chSysLock();
+        	//reset the timer counter
+        	GPTD12.tim->CNT = 0;
+*/
+        	//doFFT_c(FFT_SIZE, complex_input);
+
             doFFT_optimized(FFT_SIZE, bufferCmplxInput);
 
+/*
+        	time = GPTD12.tim->CNT;
+        	chSysUnlock();
+        	chprintf((BaseSequentialStream *)&SDU1, "time=%dus\n\r", time);
+//********************** end stopwatch
+
+        	//convert buffer from array of complex floats to array of floats
+        	for(uint16_t counter =0; counter < FFT_SIZE; counter++){
+				bufferCmplxInput[counter*2] = complex_input[counter].real;
+				bufferCmplxInput[counter*2 + 1] = complex_input[counter].imag;
+			}
+*/
             arm_cmplx_mag_f32(bufferCmplxInput, bufferOutput, FFT_SIZE);
 
             SendFloatToComputer((BaseSequentialStream *) &SD3, bufferOutput, FFT_SIZE);
