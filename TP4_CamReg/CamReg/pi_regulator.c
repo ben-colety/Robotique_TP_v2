@@ -14,8 +14,6 @@
 #define K_p 1
 #define K_i 0
 
-//#define SPEED_LIMIT
-
 static THD_WORKING_AREA(waPiRegulator, 256);
 static THD_FUNCTION(PiRegulator, arg) {
 
@@ -34,7 +32,7 @@ static THD_FUNCTION(PiRegulator, arg) {
         current_distance = get_distance_cm();
         if(current_distance > 0){
         error = current_distance - TARGET_DISTANCE;
-		chprintf((BaseSequentialStream *)&SD3, "error = %3.2f \r\n", error);
+		//chprintf((BaseSequentialStream *)&SD3, "error = %3.2f \r\n", error);
         integral += error;
         
         speed = ((K_p * error) + (K_i * integral));

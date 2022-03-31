@@ -22,7 +22,7 @@
 
 #define SIZE_INT8		8
 
-#define SMOOTHING_FACTOR		2
+#define SMOOTHING_FACTOR		0
 #define DETECTION_THRESHOLD		0.5
 
 #define LINE_WIDTH_CM 	5.05f
