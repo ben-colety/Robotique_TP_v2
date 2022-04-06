@@ -25,6 +25,12 @@ static float micRight_output[FFT_SIZE];
 static float micFront_output[FFT_SIZE];
 static float micBack_output[FFT_SIZE];
 
+//counter for reception of samples used in processAudioData(-)
+static uint16_t samples_received = 0;
+//counter for sending data from processAudioData(-) once for every chosen period
+static uint8_t send = 0;
+
+
 /*
 *	Callback called when the demodulation of the four microphones is done.
 *	We get 160 samples per mic every 10ms (16kHz)
@@ -44,7 +50,48 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 	*
 	*/
 
-	
+	//all broken :(
+	while(samples_received < FFT_SIZE)
+	{
+		uint16_t counter;
+		uint16_t input_real_index;
+		uint16_t input_imag_index;
+		for(counter = samples_received; counter < num_samples + samples_received && samples_received < FFT_SIZE; counter++, samples_received++)
+		{
+			input_real_index = 2*counter;				//to fill index of buffer that corresponds to the real part
+			micRight_cmplx_input[input_real_index] = (float)data[counter];	//I don't think the cast is necessary since the variable type of the micRight_cmplx_input is float, but I will include it anyway
+			micLeft_cmplx_input[input_real_index] = (float)data[counter+num_samples];
+			micBack_cmplx_input[input_real_index] = (float)data[counter+2*num_samples];
+			micFront_cmplx_input[input_real_index] = (float)data[counter+3*num_samples];
+
+			input_imag_index = input_real_index + 1;	//to fill index of buffer that corresponds to the imaginary part
+			micRight_cmplx_input[input_imag_index] = 0;
+			micLeft_cmplx_input[input_imag_index] = 0;
+			micBack_cmplx_input[input_imag_index] = 0;
+			micFront_cmplx_input[input_imag_index] = 0;
+		}
+	}
+
+	//calculate fast Fourier Transform of signals arrived at each microphone
+    doFFT_optimized(FFT_SIZE, micRight_cmplx_input);
+    doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
+    doFFT_optimized(FFT_SIZE, micBack_cmplx_input);
+    doFFT_optimized(FFT_SIZE, micFront_cmplx_input);
+
+    //calculate magnitude of values of Fourier Transform (only contains real numbers -> stored in buffer of FFT_SIZE)
+    arm_cmplx_mag_f32(micRight_cmplx_input, micLeft_output, FFT_SIZE);
+    arm_cmplx_mag_f32(micLeft_cmplx_input, micRight_output, FFT_SIZE);
+    arm_cmplx_mag_f32(micBack_cmplx_input, micFront_output, FFT_SIZE);
+    arm_cmplx_mag_f32(micFront_cmplx_input, micBack_output, FFT_SIZE);
+
+    if(send < SENDING_PERIOD){
+    	send++;
+    }else{
+    	chprintf((BaseSequentialStream *)&SDU1, "about to send!");
+        chBSemSignal(&sendToComputer_sem);
+        send = 0;
+    }
+    find_that_sound(micFront_output);
 }
 
 
@@ -81,3 +128,40 @@ float* get_audio_buffer_ptr(BUFFER_NAME_t name){
 		return NULL;
 	}
 }
+
+void find_that_sound(float* mic_buffer){
+	//find the dominant frequency within a given range
+	uint16_t peak_index;
+	for(int16_t counter = MIN_FREQ_INDEX; counter < MAX_FREQ_INDEX; counter++)
+	{
+		if(mic_buffer[counter]>= MIN_MAG_THRESHOLD && mic_buffer[counter] > mic_buffer[peak_index])
+			peak_index = counter;
+	}
+	//do an action based on the value of the peak frequency
+	if(peak_index >= MIN_FREQ_INDEX && peak_index < MIN_FREQ_INDEX + ACTION_FREQ_RANGE)	//62.5 - 828.125 Hz
+	{
+		left_motor_set_speed(1000);
+		right_motor_set_speed(1000);
+	}
+	else if(peak_index >= MIN_FREQ_INDEX+ACTION_FREQ_RANGE && peak_index < MIN_FREQ_INDEX + 2*ACTION_FREQ_RANGE)	//828.125 - 1,593.75 Hz
+	{
+		left_motor_set_speed(-1000);
+		right_motor_set_speed(-1000);
+	}
+	else if(peak_index >= MIN_FREQ_INDEX + 2*ACTION_FREQ_RANGE && peak_index < MIN_FREQ_INDEX + 3*ACTION_FREQ_RANGE)		//1,593.75 - 2,359.375 Hz
+	{
+		left_motor_set_speed(1000);
+		right_motor_set_speed(-1000);
+	}
+	else if(peak_index >= MIN_FREQ_INDEX + 3*ACTION_FREQ_RANGE && peak_index < MIN_FREQ_INDEX + 4*ACTION_FREQ_RANGE)		//2,359.375 - 3125 Hz
+	{
+		left_motor_set_speed(-1000);
+		right_motor_set_speed(1000);
+	}
+	else
+	{
+		left_motor_set_speed(0);
+		right_motor_set_speed(0);
+	}
+}
+

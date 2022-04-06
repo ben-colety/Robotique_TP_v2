@@ -17,7 +17,7 @@
 #include <arm_math.h>
 
 //uncomment to send the FFTs results from the real microphones
-//#define SEND_FROM_MIC
+#define SEND_FROM_MIC
 
 //uncomment to use double buffering to send the FFT to the computer
 #define DOUBLE_BUFFERING
@@ -52,7 +52,6 @@ static void timer12_start(void){
 
 int main(void)
 {
-
     halInit();
     chSysInit();
     mpu_init();
