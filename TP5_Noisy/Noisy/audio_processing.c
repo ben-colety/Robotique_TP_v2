@@ -50,7 +50,6 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 	*
 	*/
 
-	//all broken :(
 	while(samples_received < FFT_SIZE)
 	{
 		uint16_t counter;
@@ -69,6 +68,8 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			micLeft_cmplx_input[input_imag_index] = 0;
 			micBack_cmplx_input[input_imag_index] = 0;
 			micFront_cmplx_input[input_imag_index] = 0;
+
+			//chprintf((BaseSequentialStream *)&SDU1, "the current frequency is (%6.5f, %6.5f)\r\n",  micFront_cmplx_input[input_real_index], micFront_cmplx_input[input_imag_index]);
 		}
 	}
 
@@ -87,8 +88,8 @@ void processAudioData(int16_t *data, uint16_t num_samples){
     if(send < SENDING_PERIOD){
     	send++;
     }else{
-    	chprintf((BaseSequentialStream *)&SDU1, "about to send!");
         chBSemSignal(&sendToComputer_sem);
+        samples_received = 0;
         send = 0;
     }
     find_that_sound(micFront_output);
@@ -130,13 +131,33 @@ float* get_audio_buffer_ptr(BUFFER_NAME_t name){
 }
 
 void find_that_sound(float* mic_buffer){
+/*
+	float max_norm = MIN_VALUE_THRESHOLD;
+	int16_t max_norm_index = -1;
+	//search for the highest peak
+	for(uint16_t i = MIN_FREQ ; i <= MAX_FREQ ; i++){
+	if(data[i] > max_norm){
+		max_norm = data[i];
+		max_norm_index = i;
+		}
+		}
+*/
+
+
 	//find the dominant frequency within a given range
-	uint16_t peak_index;
+	uint16_t peak_index = 0;
+	//chprintf((BaseSequentialStream *)&SDU1, "the current frequency is (%6.5f, %6.5f)\r\n",  micFront_o[input_real_index], micFront_cmplx_input[input_imag_index]);
 	for(int16_t counter = MIN_FREQ_INDEX; counter < MAX_FREQ_INDEX; counter++)
 	{
+		//chprintf((BaseSequentialStream *)&SDU1, "the current frequency is (%6.5f)\r\n",  micFront_output[counter]);
 		if(mic_buffer[counter]>= MIN_MAG_THRESHOLD && mic_buffer[counter] > mic_buffer[peak_index])
 			peak_index = counter;
 	}
+	float peak_freq = (peak_index-512) * FREQ_RES;
+    chprintf((BaseSequentialStream *)&SDU1, "the peak frequency is %4.2f!\r\n", peak_freq);//**************
+
+
+
 	//do an action based on the value of the peak frequency
 	if(peak_index >= MIN_FREQ_INDEX && peak_index < MIN_FREQ_INDEX + ACTION_FREQ_RANGE)	//62.5 - 828.125 Hz
 	{
