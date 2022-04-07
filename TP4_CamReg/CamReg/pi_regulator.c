@@ -11,7 +11,7 @@
 #include <process_image.h>
 
 #define TARGET_DISTANCE 10 //[cm]
-#define K_p 1
+#define K_p 100
 #define K_i 0
 
 static THD_WORKING_AREA(waPiRegulator, 256);
