@@ -52,8 +52,12 @@ int main(void)
 	motors_init();
 
 	//stars the threads for the pi regulator and the processing of the image
-	pi_regulator_start();
-	process_image_start();
+	//pi_regulator_start();
+	int16_t speed = 150;
+	right_motor_set_speed(speed);
+	left_motor_set_speed(speed);
+
+	//process_image_start();
 
     /* Infinite loop. */
     while (1) {
